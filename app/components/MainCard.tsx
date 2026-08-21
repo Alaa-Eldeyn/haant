@@ -46,7 +46,7 @@ export default function MainCard() {
           }}
         />
 
-        <p className="text-center text-xs tracking-widest mb-2" style={{ color: 'var(--c-text3)' }}>
+        <p className="text-center text-xs tracking-widest !mb-4" style={{ color: 'var(--c-text3)' }}>
           🎖️ مبروك ينجم خلصت{' '}
           <span style={{ color: '#deb887' }}>
             ( {elapsedDays.toLocaleString('ar-EG')} يوم )
