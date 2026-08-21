@@ -1,51 +1,160 @@
 @import "tailwindcss";
 
+/* ── Design tokens ───────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #060d06;
+  --c-gold: #FFD700;
+  --c-gold2: #FFC107;
+  --c-gold-dark: #B8860B;
+  --c-bg: #060e06;
+  --c-bg2: #0d1a0d;
+  --c-bg3: #111f11;
+  --c-army: #1a2e1a;
+  --c-army2: #243824;
+  --c-army3: #2d4a2d;
+  --c-army4: #3a5e3a;
+  --c-light: #4a7c4a;
+  --c-text: #e8f5e8;
+  --c-text2: #a8c8a8;
+  --c-text3: #6a9a6a;
+  --c-blue: #4fc3f7;
+  --c-purple: #ce93d8;
+  --c-orange: #ffb74d;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #060d06;
-    --foreground: #ededed;
-  }
-}
-
+/* Tailwind v4 theme bridge */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--c-bg);
+  --color-foreground: var(--c-text);
   --font-cairo: var(--font-cairo);
   --font-tajawal: var(--font-tajawal);
-  --color-gold: #FFD700;
-  --color-gold2: #FFC107;
-  --color-gold-dark: #B8860B;
-  --color-gold-glow: #ffd7004d;
-  --color-bg: #060e06;
-  --color-bg2: #0d1a0d;
-  --color-bg3: #111f11;
-  --color-army: #1a2e1a;
-  --color-army2: #243824;
-  --color-army3: #2d4a2d;
-  --color-army4: #3a5e3a;
-  --color-light: #4a7c4a;
-  --color-cream: #f5f0e8;
-  --color-content: #e8f5e8;
-  --color-content2: #a8c8a8;
-  --color-content3: #6a9a6a;
-  --color-blue: #4fc3f7;
-  --color-purple: #ce93d8;
-  --color-orange: #ffb74d;
+  --color-gold: var(--c-gold);
+  --color-gold-dark: var(--c-gold-dark);
+  --color-army: var(--c-army);
+  --color-army2: var(--c-army2);
+  --color-army3: var(--c-army3);
+  --color-army4: var(--c-army4);
+  --color-light: var(--c-light);
+  --color-content: var(--c-text);
+  --color-content2: var(--c-text2);
+  --color-content3: var(--c-text3);
+  --color-blue: var(--c-blue);
+  --color-purple: var(--c-purple);
+  --color-orange: var(--c-orange);
+}
+
+/* ── Base ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-cairo), sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-cairo, 'Cairo'), sans-serif;
+  min-height: 100vh;
   overflow-x: hidden;
   direction: rtl;
+  /* scanlines */
+  position: relative;
 }
 
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+      transparent, transparent 2px,
+      rgba(0, 0, 0, 0.05) 2px, rgba(0, 0, 0, 0.05) 4px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Settings fields ──────────────────────────────────── */
+.settings-input,
+.modal-box input[type="date"],
+.modal-box input[type="number"],
+.modal-box select {
+  width: 100%;
+  background: var(--c-bg3);
+  border: 1px solid rgba(255, 215, 0, 0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--c-text);
+  font-family: var(--font-cairo, 'Cairo'), sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.modal-box input:focus,
+.modal-box select:focus {
+  border-color: rgba(255, 215, 0, 0.5);
+}
+
+.modal-box select option {
+  background: #1a2e1a;
+}
+
+/* ── Buttons ──────────────────────────────────────────── */
+.haant-btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 12px 10px;
+  border-radius: 12px;
+  font-family: var(--font-cairo, 'Cairo'), sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.haant-btn:active {
+  transform: scale(0.96);
+}
+
+.haant-btn-gold {
+  background: linear-gradient(135deg, var(--c-gold-dark), var(--c-gold2), var(--c-gold));
+  color: #0a1a0a;
+}
+
+.haant-btn-outline {
+  background: transparent;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  color: var(--c-gold);
+}
+
+.haant-btn-outline:hover {
+  background: rgba(255, 215, 0, 0.08);
+}
+
+/* ── Scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--c-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--c-army3);
+  border-radius: 4px;
+}
+
+/* ── Animations ───────────────────────────────────────── */
 @keyframes starPulse {
 
   0%,
@@ -60,23 +169,102 @@ body {
   }
 }
 
-@keyframes progressShine {
+@keyframes shimmer {
+  0% {
+    left: -60px;
+  }
+
+  100% {
+    left: calc(100% + 10px);
+  }
+}
+
+@keyframes bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes modalPop {
+  0% {
+    transform: scale(0.7) translateY(30px);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.04) translateY(-4px);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes rotateBorder {
   from {
-    transform: translateX(-300%);
+    --msg-angle: 0deg;
   }
 
   to {
+    --msg-angle: 360deg;
+  }
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes progressShine {
+  0% {
+    transform: translateX(-300%);
+  }
+
+  100% {
     transform: translateX(300%);
   }
+}
+
+/* @property for rotateBorder */
+@property --msg-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* ── Progress shimmer helper ──────────────────────────── */
+.progress-shimmer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmer 2.5s ease-in-out infinite;
 }
 
 .progress-shine {
   position: absolute;
   inset: 0;
   width: 40%;
-  background: linear-gradient(90deg,
-      transparent,
-      rgba(255, 255, 255, .5),
-      transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
   animation: progressShine 2s linear infinite;
 }
