@@ -9,6 +9,7 @@ import {
   ReactNode,
 } from 'react';
 import { Settings, DEFAULT_SETTINGS, calcStats, Stats } from '../lib/stats';
+import { useNotifications } from '../hooks/useNotifications';
 
 const STORAGE_KEY = 'haant_settings';
 
@@ -62,6 +63,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [settings]);
 
   const updateSettings = (next: Settings) => setSettings(next);
+
+  // Schedule end-of-day notifications based on current settings
+  useNotifications(settings);
 
   return (
     <AppContext.Provider value={{ settings, updateSettings, stats }}>

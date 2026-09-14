@@ -9,6 +9,7 @@ import { useDailyMessage } from './components/DailyMessage';
 import SettingsModal from './components/SettingsModal';
 import TodayMsgModal from './components/TodayMsgModal';
 import CelebrationOverlay from './components/CelebrationOverlay';
+import EidFloatingBtn from './components/EidFloatingBtn';
 import { useStats } from './hooks/useStats';
 import { arabicDate } from './lib/stats';
 
@@ -24,6 +25,7 @@ export default function Page() {
   if (isFinished) return <CelebrationOverlay />;
 
   return (
+    <>
     <main
       style={{
         position: 'relative',
@@ -128,5 +130,9 @@ export default function Page() {
 
       {showTodayMsg && <TodayMsgModal onClose={() => setShowTodayMsg(false)} />}
     </main>
+
+    {/* ── Eid floating button (outside main so it's always visible) ── */}
+    <EidFloatingBtn />
+    </>
   );
 }

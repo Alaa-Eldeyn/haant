@@ -5,6 +5,8 @@ export interface Settings {
   vacDays: number;
   vacTurn: 1 | 2 | 3;
   nextVacDate: string; // override anchor date (fix-vac)
+  endOfDayTime: string;       // "HH:MM" — time to send end-of-day notification
+  notificationsEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -14,6 +16,8 @@ export const DEFAULT_SETTINGS: Settings = {
   vacDays: 10,
   vacTurn: 2,
   nextVacDate: '',
+  endOfDayTime: '22:00',
+  notificationsEnabled: false,
 };
 
 export interface VacStatus {
@@ -102,6 +106,9 @@ export function calcStats(settings: Settings): Stats {
 
   // Find the correct current/next vacation window
   let tempStart = new Date(anchorVacStart);
+  while (tempStart > now && new Date(tempStart.getTime() - cycle * 86400000) >= startOfDay(new Date(settings.startDate))) {
+    tempStart = new Date(tempStart.getTime() - cycle * 86400000);
+  }
   while (
     new Date(tempStart.getTime() + cycle * 86400000) < now
   ) {
@@ -232,3 +239,213 @@ export function arabicDate(): string {
     day: 'numeric',
   });
 }
+
+// ── Eid Checker ────────────────────────────────────────────────────────────────
+// Known Egyptian Eid dates (approximate - Islamic calendar 2026-2028)
+export interface EidEntry {
+  name: string;
+  emoji: string;
+  start: string; // 'YYYY-MM-DD'
+  end: string;   // 'YYYY-MM-DD' (last day of holiday)
+}
+
+export interface EidMatch {
+  eid: EidEntry;
+  vacStart: Date;
+  vacEnd: Date;
+}
+
+export interface EidPastItem {
+  eid: EidEntry;
+  wasOnVac: boolean;
+  vacStart?: Date;
+  vacEnd?: Date;
+}
+
+export interface EidCheckResult {
+  matches: EidMatch[];     // Upcoming Eids that land ON vacation
+  missed: EidEntry[];      // Upcoming Eids that land ON duty
+  past: EidPastItem[];     // Eids that already passed during service
+  hasUpcomingEids: boolean; // Whether any Eid exists between today and service end
+}
+
+function toDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Automatically discovers all Eid al-Fitr (1-3 Shawwal) and Eid al-Adha (9-13 Dhu al-Hijjah)
+ * occurrences for ANY service period in any year dynamically via the built-in Islamic calendar API.
+ */
+export function discoverEids(serviceStart: Date, serviceEnd: Date): EidEntry[] {
+  let fmt: Intl.DateTimeFormat;
+  try {
+    fmt = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { day: 'numeric', month: 'numeric' });
+  } catch {
+    fmt = new Intl.DateTimeFormat('en-u-ca-islamic', { day: 'numeric', month: 'numeric' });
+  }
+
+  // Scan with a 7-day padding to accurately capture Eids spanning boundaries
+  let cur = new Date(serviceStart.getTime() - 7 * 86400000);
+  cur.setHours(0, 0, 0, 0);
+  const finish = new Date(serviceEnd.getTime() + 7 * 86400000);
+  finish.setHours(0, 0, 0, 0);
+
+  const eids: EidEntry[] = [];
+  let inFitr = false;
+  let fitrStart: Date | null = null;
+  let inAdha = false;
+  let adhaStart: Date | null = null;
+
+  while (cur <= finish) {
+    let month = 0;
+    let day = 0;
+    try {
+      const parts = fmt.formatToParts(cur);
+      for (const p of parts) {
+        if (p.type === 'month') month = parseInt(p.value, 10);
+        if (p.type === 'day') day = parseInt(p.value, 10);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // Eid al-Fitr: 1 to 3 Shawwal (month 10)
+    if (month === 10 && day >= 1 && day <= 3) {
+      if (!inFitr) {
+        inFitr = true;
+        fitrStart = new Date(cur);
+      }
+    } else if (inFitr && fitrStart) {
+      const prev = new Date(cur.getTime() - 86400000);
+      eids.push({
+        name: `عيد الفطر ${fitrStart.getFullYear()}`,
+        emoji: '🌙',
+        start: toDateString(fitrStart),
+        end: toDateString(prev),
+      });
+      inFitr = false;
+      fitrStart = null;
+    }
+
+    // Eid al-Adha: 9 (Arafah) to 13 Dhu al-Hijjah (month 12)
+    if (month === 12 && day >= 9 && day <= 13) {
+      if (!inAdha) {
+        inAdha = true;
+        adhaStart = new Date(cur);
+      }
+    } else if (inAdha && adhaStart) {
+      const prev = new Date(cur.getTime() - 86400000);
+      eids.push({
+        name: `عيد الأضحى ${adhaStart.getFullYear()}`,
+        emoji: '🐑',
+        start: toDateString(adhaStart),
+        end: toDateString(prev),
+      });
+      inAdha = false;
+      adhaStart = null;
+    }
+
+    cur = new Date(cur.getTime() + 86400000);
+  }
+
+  // Flush in case period ends while inside an Eid
+  if (inFitr && fitrStart) {
+    const prev = new Date(finish);
+    eids.push({
+      name: `عيد الفطر ${fitrStart.getFullYear()}`,
+      emoji: '🌙',
+      start: toDateString(fitrStart),
+      end: toDateString(prev),
+    });
+  }
+  if (inAdha && adhaStart) {
+    const prev = new Date(finish);
+    eids.push({
+      name: `عيد الأضحى ${adhaStart.getFullYear()}`,
+      emoji: '🐑',
+      start: toDateString(adhaStart),
+      end: toDateString(prev),
+    });
+  }
+
+  return eids;
+}
+
+export function calcEidStatus(settings: Settings): EidCheckResult {
+  const now          = new Date();
+  const todayStart   = startOfDay(now);
+  const serviceStart = startOfDay(new Date(settings.startDate));
+  const serviceEnd   = startOfDay(new Date(settings.endDate));
+  const cycle        = settings.amalahDays + settings.vacDays;
+  const vacDuration  = settings.vacDays;
+
+  let anchorVacStart: Date;
+  if (settings.nextVacDate) {
+    anchorVacStart = startOfDay(new Date(settings.nextVacDate));
+  } else {
+    const TURN2_ANCHOR = startOfDay(new Date('2026-09-11'));
+    const turnOffset = (settings.vacTurn - 2) * settings.vacDays;
+    anchorVacStart = new Date(TURN2_ANCHOR.getTime() + turnOffset * 86400000);
+  }
+
+  // Walk backwards to first vac window on/after serviceStart
+  let cursor = new Date(anchorVacStart);
+  while (new Date(cursor.getTime() - cycle * 86400000) >= serviceStart) {
+    cursor = new Date(cursor.getTime() - cycle * 86400000);
+  }
+
+  // Collect all vacation windows during service period
+  const vacWindows: { start: Date; end: Date }[] = [];
+  while (cursor <= serviceEnd) {
+    const wStart = new Date(cursor);
+    const wEnd   = new Date(cursor.getTime() + (vacDuration - 1) * 86400000);
+    if (wStart <= serviceEnd) vacWindows.push({ start: wStart, end: wEnd });
+    cursor = new Date(cursor.getTime() + cycle * 86400000);
+  }
+
+  // Dynamically discover all Eids occurring in this service range for any year!
+  const discoveredEids = discoverEids(serviceStart, serviceEnd);
+
+  const matches: EidMatch[] = [];
+  const missed: EidEntry[] = [];
+  const past: EidPastItem[] = [];
+
+  for (const eid of discoveredEids) {
+    const eidStart = startOfDay(new Date(eid.start));
+    const eidEnd   = startOfDay(new Date(eid.end));
+
+    // Must be within the overall service period
+    if (eidEnd < serviceStart || eidStart > serviceEnd) {
+      continue;
+    }
+
+    const hit = vacWindows.find((w) => eidStart <= w.end && eidEnd >= w.start);
+
+    // Check if Eid is already in the past (ended before today)
+    if (eidEnd < todayStart) {
+      past.push({
+        eid,
+        wasOnVac: !!hit,
+        vacStart: hit?.start,
+        vacEnd: hit?.end,
+      });
+    } else {
+      // Future or current Eid
+      if (hit) {
+        matches.push({ eid, vacStart: hit.start, vacEnd: hit.end });
+      } else {
+        missed.push(eid);
+      }
+    }
+  }
+
+  const hasUpcomingEids = matches.length > 0 || missed.length > 0;
+
+  return { matches, missed, past, hasUpcomingEids };
+}
+
+

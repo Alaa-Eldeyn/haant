@@ -15,6 +15,9 @@ export default function SettingsModal({ onClose, onSave }: Props) {
   const [form, setForm] = useState<Settings>({ ...settings });
   const [showFixVac, setShowFixVac] = useState(false);
   const [fixVacDate, setFixVacDate] = useState(settings.nextVacDate || '');
+  const [notifPermDenied, setNotifPermDenied] = useState(
+    typeof window !== 'undefined' && Notification.permission === 'denied'
+  );
 
   function set<K extends keyof Settings>(key: K, value: Settings[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -30,6 +33,33 @@ export default function SettingsModal({ onClose, onSave }: Props) {
     if (!fixVacDate) { showToast('اختار تاريخ الأول!'); return; }
     setForm((prev) => ({ ...prev, nextVacDate: fixVacDate }));
     setShowFixVac(false);
+  }
+
+  async function handleNotifToggle() {
+    if (form.notificationsEnabled) {
+      // turning OFF
+      set('notificationsEnabled', false);
+      return;
+    }
+    // turning ON — request permission first
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      showToast('المتصفح ده مش بيدعم الإشعارات!');
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      setNotifPermDenied(true);
+      showToast('الإشعارات متوقفة من إعدادات المتصفح، فعّلها يدوياً');
+      return;
+    }
+    const result = Notification.permission === 'granted'
+      ? 'granted'
+      : await Notification.requestPermission();
+    if (result === 'granted') {
+      set('notificationsEnabled', true);
+    } else {
+      setNotifPermDenied(true);
+      showToast('الإذن اترفض، فعّل الإشعارات يدوياً من المتصفح');
+    }
   }
 
   return (
@@ -136,6 +166,81 @@ export default function SettingsModal({ onClose, onSave }: Props) {
                 ✅ تطبيق
               </button>
             </div>
+          )}
+        </div>
+
+        {/* ── Notifications ─────────────────────────────── */}
+        <div
+          style={{
+            marginBottom: 16,
+            background: 'rgba(255,215,0,0.05)',
+            border: '1px solid rgba(255,215,0,0.15)',
+            borderRadius: 12,
+            padding: '14px 14px 12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: form.notificationsEnabled ? 12 : 0 }}>
+            <label style={{ fontSize: 12, color: 'var(--c-text3)', userSelect: 'none' }}>
+              🔔 إشعار نهاية اليوم
+            </label>
+            {/* Toggle switch */}
+            <button
+              id="notif-toggle"
+              onClick={handleNotifToggle}
+              aria-pressed={form.notificationsEnabled}
+              style={{
+                width: 46,
+                height: 24,
+                borderRadius: 12,
+                border: 'none',
+                cursor: notifPermDenied ? 'not-allowed' : 'pointer',
+                background: form.notificationsEnabled
+                  ? 'linear-gradient(90deg,#B8860B,#FFD700)'
+                  : 'rgba(255,255,255,0.1)',
+                position: 'relative',
+                transition: 'background 0.3s',
+                flexShrink: 0,
+                outline: 'none',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 3,
+                  left: form.notificationsEnabled ? 25 : 3,
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  background: '#fff',
+                  transition: 'left 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+                }}
+              />
+            </button>
+          </div>
+
+          {form.notificationsEnabled && (
+            <>
+              <label style={{ display: 'block', fontSize: 11, color: 'var(--c-text3)', marginBottom: 6 }}>
+                🕐 وقت الإشعار (الساعة)
+              </label>
+              <input
+                id="notif-time"
+                type="time"
+                value={form.endOfDayTime}
+                onChange={(e) => set('endOfDayTime', e.target.value)}
+                style={inputStyle}
+              />
+              <p style={{ fontSize: 10, color: 'rgba(255,215,0,0.4)', marginTop: 6, lineHeight: 1.5 }}>
+                هتوصلك إشعار كل يوم الساعة {form.endOfDayTime} بنهاية اليوم ورسالة التحفيز 💪
+              </p>
+            </>
+          )}
+
+          {notifPermDenied && (
+            <p style={{ fontSize: 10, color: '#ff6b6b', marginTop: 6, lineHeight: 1.5 }}>
+              ⚠️ الإشعارات محظورة من إعدادات المتصفح. افتح إعدادات المتصفح وفعّل الإشعارات للموقع ده.
+            </p>
           )}
         </div>
 
