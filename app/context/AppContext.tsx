@@ -55,11 +55,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [settings]);
 
-  // Recompute stats whenever settings change
+  // Recompute stats on every settings change, every minute, and precisely at midnight.
   useEffect(() => {
+    // Immediate recalculation
     setStats(calcStats(settings));
-    const id = setInterval(() => setStats(calcStats(settings)), 60_000);
-    return () => clearInterval(id);
+
+    // Fallback: recalculate every 60 seconds (keeps sub-fields like vacStatus fresh)
+    const intervalId = setInterval(() => setStats(calcStats(settings)), 60_000);
+
+    // Precise midnight tick: schedule a setTimeout for the exact moment the day flips,
+    // then restart the whole effect by toggling a counter — this guarantees all
+    // day-dependent stats (elapsedDays, pct, rank, vacStatus…) update at 00:00:00.
+    let midnightId: ReturnType<typeof setTimeout>;
+
+    function scheduleMidnight() {
+      const now = new Date();
+      const msUntilMidnight =
+        new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() -
+        now.getTime();
+      midnightId = setTimeout(() => {
+        setStats(calcStats(settings));
+        scheduleMidnight(); // reschedule for the next midnight
+      }, msUntilMidnight);
+    }
+
+    scheduleMidnight();
+
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(midnightId);
+    };
   }, [settings]);
 
   const updateSettings = (next: Settings) => setSettings(next);
