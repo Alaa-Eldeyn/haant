@@ -1,7 +1,7 @@
 'use client';
 
-import { getRank } from '../lib/stats';
 import { useStats } from '../hooks/useStats';
+import { getRank } from '../lib/rank';
 
 export default function Header() {
   const stats = useStats();
@@ -14,7 +14,7 @@ export default function Header() {
     day: 'numeric',
   });
 
-  const rank = stats ? getRank(stats.elapsedDays) : '🎖️ جندي بائس 🎖️';
+  const rank = getRank(stats?.pct ?? 0);
 
   return (
     <div className="text-center mb-4 relative">
@@ -55,7 +55,7 @@ export default function Header() {
 
       {/* Rank badge */}
       <p className="text-sm tracking-widest" style={{ color: 'var(--c-text3)', marginBottom: 14 }}>
-        {rank}
+        {rank.icon} {rank.title} {rank.icon}
       </p>
 
       {/* Date pill */}

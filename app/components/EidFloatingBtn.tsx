@@ -26,7 +26,7 @@ export default function EidFloatingBtn() {
         style={{
           position: 'fixed',
           bottom: 24,
-          right: 20,
+          left: 20,
           zIndex: 40,
           width: 56,
           height: 56,

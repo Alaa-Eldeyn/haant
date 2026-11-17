@@ -222,14 +222,7 @@ export function calcStats(settings: Settings): Stats {
   };
 }
 
-export function getRank(elapsedDays: number): string {
-  if (elapsedDays < 30) return '🪖 عسكري مستجد 🪖';
-  if (elapsedDays < 90) return '🪖 عسكري مستجد 🪖';
-  if (elapsedDays < 180) return '💪 عسكري كحول 💪';
-  if (elapsedDays < 270) return '⭐ نائب رديف ⭐';
-  if (elapsedDays < 365) return '🎖️ رديف 🎖️';
-  return '👑 باشا البلد 👑';
-}
+
 
 export function arabicDate(): string {
   return new Date().toLocaleDateString('ar-EG', {
